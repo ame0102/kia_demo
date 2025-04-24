@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Security Architecture Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
+    <!-- Include React and ReactDOM properly -->
+    <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Add Lucide with the correct version -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.221.0/dist/umd/lucide.min.js" crossorigin></script>
+    
+    <!-- Add Babel for JSX transformation -->
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.16.12/babel.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold mb-6 text-center">Vehicle Security Architecture Demo</h1>
+            
+            <div id="vehicle-security-demo"></div>
+        </div>
+    </div>
+
+    <!-- React component for the Vehicle Security Demo -->
+    {% verbatim %}
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Helper function to create icon HTML
+        const createIcon = (iconName, props = {}) => {
+            const element = document.createElement('div');
+            lucide.createIcons({
+                icons: {
+                    [iconName]: lucide[iconName]
+                },
+                attrs: props,
+                element
+            });
+            return element.innerHTML;
+        };
+
+        const VehicleSecurityDemo = () => {
+            const [activeTab, setActiveTab] = useState('insecure');
+            const [attackActive, setAttackActive] = useState(false);
+            const [attackStep, setAttackStep] = useState(0);
+            const [attackBlocked, setAttackBlocked] = useState(false);
+            const [securityActive, setSecurityActive] = useState(false);
+            const [securityFeature, setSecurityFeature] = useState('');
+
+            // Reset state when changing tabs
+            useEffect(() => {
+                setAttackActive(false);
+                setAttackStep(0);
+                setAttackBlocked(false);
+                setSecurityActive(false);
+                setSecurityFeature('');
+            }, [activeTab]);
+
+            // Run attack simulation by calling the API
+            const runAttack = async () => {
+                setAttackActive(true);
+                
+                try {
+                    const response = await fetch('/api/simulate_attack/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            mode: activeTab,
+                            attack_type: 'ownership'
+                        }),
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (activeTab === 'insecure') {
+                        // Progress through attack steps for insecure system
+                        let step = 0;
+                        const interval = setInterval(() => {
+                            if (step < 4) {
+                                step++;
+                                setAttackStep(step);
+                            } else {
+                                clearInterval(interval);
+                            }
+                        }, 1000);
+                    } else if (activeTab === 'secure') {
+                        // Activate security measures
+                        setSecurityActive(true);
+                        
+                        // Set which security feature blocks the attack
+                        setSecurityFeature(data.blocking_feature === 'OAuth + MFA Security' ? 'api' : 
+                                        data.blocking_feature === 'TUF Firmware Security' ? 'ota' : 'can');
+                        
+                        // Block the attack after a short delay
+                        setTimeout(() => {
+                            setAttackBlocked(true);
+                        }, 2000);
+                    }
+                } catch (error) {
+                    console.error('Error simulating attack:', error);
+                }
+            };
+
+            return (
+                <div className="bg-gray-50 p-4">
+                    {/* Header and Tab Selection */}
+                    <div className="flex items-center justify-between mb-6">
+                        <h1 className={`text-xl font-bold ${activeTab === 'insecure' ? 'text-red-600' : 'text-green-600'} `}>
+                            Vehicle Security Architecture
+                        </h1>
+                        <div className="flex border rounded-lg overflow-hidden">
+                            <button 
+                                className={`px-4 py-2 font-medium text-sm ${activeTab === 'insecure' ? 'bg-red-500 text-white' : 'bg-white text-gray-700'}`}
+                                onClick={() => setActiveTab('insecure')}
+                            >
+                                Insecure
+                            </button>
+                            <button 
+                                className={`px-4 py-2 font-medium text-sm ${activeTab === 'secure' ? 'bg-green-500 text-white' : 'bg-white text-gray-700'}`}
+                                onClick={() => setActiveTab('secure')}
+                            >
+                                Secure
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Attack Controls */}
+                    <div className={`mb-6 p-4 border rounded-lg ${activeTab === 'insecure' ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h3 className="font-medium">Simulation Controls</h3>
+                                <p className="text-sm text-gray-600">
+                                    {activeTab === 'insecure' 
+                                        ? 'Simulate an attack on a vulnerable vehicle system' 
+                                        : 'Test security measures against an attack attempt'}
+                                </p>
+                            </div>
+                            <button 
+                                className={`px-4 py-2 rounded-lg font-medium ${
+                                    attackActive 
+                                        ? 'bg-gray-300 cursor-not-allowed' 
+                                        : activeTab === 'insecure' 
+                                            ? 'bg-red-500 text-white hover:bg-red-600' 
+                                            : 'bg-green-500 text-white hover:bg-green-600'
+                                }`}
+                                onClick={!attackActive ? runAttack : undefined}
+                                disabled={attackActive}
+                            >
+                                {attackActive ? 'Attack in Progress' : 'Run Attack Simulation'}
+                            </button>
+                        </div>
+
+                        {/* Attack Progress Visualization */}
+                        {attackActive && (
+                            <div className="mt-4">
+                                <div className="mb-2 flex justify-between text-xs">
+                                    <span>Attack Initiation</span>
+                                    <span>Complete Takeover</span>
+                                </div>
+                                <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                                    {activeTab === 'insecure' ? (
+                                        <div 
+                                            className="h-full bg-red-500 transition-all duration-500"
+                                            style={{ width: `${attackStep * 25}%` }}
+                                        ></div>
+                                    ) : (
+                                        <div className="relative h-full">
+                                            <div 
+                                                className="absolute h-full bg-red-500 transition-all duration-500"
+                                                style={{ width: `${securityActive ? 30 : 0}%` }}
+                                            ></div>
+                                            {attackBlocked && (
+                                                <div className="absolute h-full bg-green-500 right-0 left-0 flex items-center justify-center">
+                                                    <span dangerouslySetInnerHTML={{ __html: createIcon('X', {size: 14, class: 'text-white'}) }}></span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {/* Status Messages */}
+                                {activeTab === 'insecure' && attackStep > 0 && (
+                                    <div className="mt-2 text-sm text-red-600">
+                                        {attackStep === 1 && "Step 1: Authentication bypass - Accessing dealer portal..."}
+                                        {attackStep === 2 && "Step 2: Owner information leaked - Obtaining vehicle details..."}
+                                        {attackStep === 3 && "Step 3: Owner permissions modified - Demoting legitimate owner..."}
+                                        {attackStep === 4 && (
+                                            <div className="flex items-center">
+                                                <span dangerouslySetInnerHTML={{ __html: createIcon('Check', {size: 16, class: 'mr-2'}) }}></span>
+                                                <span className="font-medium">Takeover complete - Attacker has full remote access!</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                
+                                {activeTab === 'secure' && (
+                                    <div className="mt-2 text-sm">
+                                        {!attackBlocked ? (
+                                            <div className="text-yellow-600">Attack attempt detected - Security systems responding...</div>
+                                        ) : (
+                                            <div className="flex items-center text-green-600">
+                                                <span dangerouslySetInnerHTML={{ __html: createIcon('Check', {size: 16, class: 'mr-2'}) }}></span>
+                                                <span className="font-medium">
+                                                    {securityFeature === 'api' ? 'Authentication required: Attack blocked at API level' : 
+                                                    securityFeature === 'ota' ? 'Invalid signature: Firmware update rejected' : 
+                                                    'Invalid CMAC: Unauthorized CAN frame blocked'}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Component Section */}
+                    {activeTab === 'insecure' ? (
+                        <div className="mb-6">
+                            <h2 className="text-lg font-bold mb-3 border-b border-gray-300 pb-1">Insecure System Components</h2>
+                            
+                            {/* Attacker Component */}
+                            <div className="flex mb-4">
+                                <div className="p-3 rounded-lg bg-red-50 border border-red-200 w-1/2 mr-2">
+                                    <div className="flex items-center mb-1">
+                                        <div className="p-1 rounded-full bg-red-200 mr-2">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('Cpu', {size: 16, class: 'text-red-600'}) }}></span>
+                                        </div>
+                                        <span className="font-medium text-sm">Attacker Component</span>
+                                    </div>
+                                    <p className="text-xs text-gray-600">Entry point for the attack, representing the malicious actor attempting to gain control.</p>
+                                    {attackStep >= 1 && (
+                                        <div className="mt-1 p-1 bg-red-100 border border-red-300 rounded text-red-800 flex items-center">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('Activity', {size: 12, class: 'mr-1'}) }}></span>
+                                            <span className="text-xs">Malicious activity detected!</span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="p-3 rounded-lg bg-gray-800 text-gray-200 w-1/2">
+                                    <h4 className="text-xs font-medium text-gray-400 mb-1">Vulnerable Code</h4>
+                                    <pre className="text-xs text-red-400 overflow-auto h-24">
+{`// No authentication checks in API
+app.post('/api/vehicle/details', (req, res) => {
+  const { vin } = req.body;
+  
+  // MISSING: Authentication & ownership verification
+  
+  db.getVehicleDetails(vin)
+    .then(details => {
+      res.json({
+        success: true,
+        vehicle: details 
+      });
+    });
+});`}
+                                    </pre>
+                                </div>
+                            </div>
+                            
+                            {/* Vehicle API Component */}
+                            <div className="flex mb-4">
+                                <div className="p-3 rounded-lg bg-red-50 border border-red-200 w-1/2 mr-2">
+                                    <div className="flex items-center mb-1">
+                                        <div className="p-1 rounded-full bg-red-200 mr-2">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('ShieldAlert', {size: 16, class: 'text-red-600'}) }}></span>
+                                        </div>
+                                        <span className="font-medium text-sm">Vehicle API Component</span>
+                                    </div>
+                                    <p className="text-xs text-gray-600">Vulnerable API allows ownership transfers without proper verification.</p>
+                                    {attackStep >= 2 && (
+                                        <div className="mt-1 p-1 bg-red-100 border border-red-300 rounded text-red-800 flex items-center">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('Key', {size: 12, class: 'mr-1'}) }}></span>
+                                            <span className="text-xs">Owner information leaked!</span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="p-3 rounded-lg bg-gray-800 text-gray-200 w-1/2">
+                                    <h4 className="text-xs font-medium text-gray-400 mb-1">Vulnerable Code</h4>
+                                    <pre className="text-xs text-red-400 overflow-auto h-24">
+{`// Insecure Ownership Transfer Endpoint
+app.post('/api/vehicle/transfer-ownership', (req, res) => {
+  const { vin, newOwnerEmail } = req.body;
+  
+  // MISSING: Ownership verification
+  // MISSING: Rate limiting
+  // MISSING: Multi-factor authentication
+  
+  db.updateVehicleOwner(vin, newOwnerEmail)
+    .then(() => {
+      res.json({
+        success: true,
+        message: "Ownership transferred successfully"
+      });
+    });
+});`}
+                                    </pre>
+                                </div>
+                            </div>
+                            
+                            {/* Vehicle Component */}
+                            <div className="flex mb-4">
+                                <div className="p-3 rounded-lg bg-red-50 border border-red-200 w-1/2 mr-2">
+                                    <div className="flex items-center mb-1">
+                                        <div className="p-1 rounded-full bg-red-200 mr-2">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('Car', {size: 16, class: 'text-red-600'}) }}></span>
+                                        </div>
+                                        <span className="font-medium text-sm">Vehicle Component</span>
+                                    </div>
+                                    <p className="text-xs text-gray-600">Target vehicle that can be controlled after ownership transfer.</p>
+                                    {attackStep >= 4 && (
+                                        <div className="mt-1 p-1 bg-red-100 border border-red-300 rounded text-red-800 flex items-center">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('AlertTriangle', {size: 12, class: 'mr-1'}) }}></span>
+                                            <span className="text-xs">Attacker gains full remote control!</span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="p-3 rounded-lg bg-gray-800 text-gray-200 w-1/2">
+                                    <h4 className="text-xs font-medium text-gray-400 mb-1">CAN Bus Communication</h4>
+                                    <pre className="text-xs text-red-400 overflow-auto h-24">
+{`// Insecure CAN Bus Implementation
+function sendCommand(command) {
+  // MISSING: Message authentication
+  // MISSING: Frame validation
+  // MISSING: Origin verification
+  
+  const frame = {
+    arbitration_id: 0x648, // Door unlock command
+    data: Buffer.from(command),
+    extended_id: false
+  };
+  
+  // Broadcast to all ECUs on the bus
+  canBus.send(frame);
+  return true; // Always assumes success
+}`}
+                                    </pre>
+                                </div>
+                            </div>
+
+                            {/* Firmware Component */}
+                            <div className="flex mb-4">
+                                <div className="p-3 rounded-lg bg-red-50 border border-red-200 w-1/2 mr-2">
+                                    <div className="flex items-center mb-1">
+                                        <div className="p-1 rounded-full bg-red-200 mr-2">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('FileDown', {size: 16, class: 'text-red-600'}) }}></span>
+                                        </div>
+                                        <span className="font-medium text-sm">Firmware Update Component</span>
+                                    </div>
+                                    <p className="text-xs text-gray-600">Unsigned firmware updates allow malicious code execution and rollbacks.</p>
+                                    {attackStep >= 3 && (
+                                        <div className="mt-1 p-1 bg-red-100 border border-red-300 rounded text-red-800 flex items-center">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('Zap', {size: 12, class: 'mr-1'}) }}></span>
+                                            <span className="text-xs">Vulnerable to malicious updates!</span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="p-3 rounded-lg bg-gray-800 text-gray-200 w-1/2">
+                                    <h4 className="text-xs font-medium text-gray-400 mb-1">OTA Update Code</h4>
+                                    <pre className="text-xs text-red-400 overflow-auto h-24">
+{`// Insecure OTA implementation
+app.get('/firmware/latest.bin', (req, res) => {
+  // MISSING: Firmware signature verification
+  // MISSING: Version monotonicity checks
+  // MISSING: Rollback prevention
+  
+  const firmwarePath = './firmware/latest.bin';
+  
+  // Send whatever file is on the server
+  res.download(firmwarePath);
+});`}
+                                    </pre>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <h2 className="text-lg font-bold mb-3 border-b border-gray-300 pb-1">Secure System Components</h2>
+                            
+                            {/* OAuth + MFA Security */}
+                            <div className="flex mb-4">
+                                <div className="p-3 rounded-lg bg-green-50 border border-green-200 w-1/2 mr-2">
+                                    <div className="flex items-center mb-1">
+                                        <div className="p-1 rounded-full bg-green-200 mr-2">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('Shield', {size: 16, class: 'text-green-600'}) }}></span>
+                                        </div>
+                                        <span className="font-medium text-sm">OAuth + MFA Security</span>
+                                    </div>
+                                    <p className="text-xs text-gray-600">Authentication system preventing unauthorized API access.</p>
+                                    {securityActive && securityFeature === 'api' && (
+                                        <div className="mt-1 p-1 bg-green-100 border border-green-300 rounded text-green-800 flex items-center">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('Check', {size: 12, class: 'mr-1'}) }}></span>
+                                            <span className="text-xs">Authentication required: Attack blocked!</span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="p-3 rounded-lg bg-gray-800 text-gray-200 w-1/2">
+                                    <h4 className="text-xs font-medium text-gray-400 mb-1">Secure Implementation</h4>
+                                    <pre className="text-xs text-green-400 overflow-auto h-24">
+{`// Secure API endpoint with OAuth authentication
+app.post('/api/vehicle/details', 
+  oauth.authenticate(), // OAuth 2.1 with PKCE
+  mfa.verify(),         // MFA for sensitive operations
+  (req, res) => {
+    const { vin } = req.body;
+    const userId = req.user.id;
+    
+    // Verify user owns this vehicle
+    ownershipService.verifyOwnership(userId, vin)
+      .then(isOwner => {
+        if (!isOwner) {
+          return res.status(403).json({
+            error: "Unauthorized access to vehicle"
+          });
+        }
+        
+        // Return data only to verified owner
+        db.getVehicleDetails(vin)
+          .then(details => res.json({
+            success: true, vehicle: details
+          }));
+      });
+  });`}
+                                    </pre>
+                                </div>
+                            </div>
+                            
+                            {/* TUF Firmware Security */}
+                            <div className="flex mb-4">
+                                <div className="p-3 rounded-lg bg-green-50 border border-green-200 w-1/2 mr-2">
+                                    <div className="flex items-center mb-1">
+                                        <div className="p-1 rounded-full bg-green-200 mr-2">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('FileDown', {size: 16, class: 'text-green-600'}) }}></span>
+                                        </div>
+                                        <span className="font-medium text-sm">TUF Firmware Security</span>
+                                    </div>
+                                    <p className="text-xs text-gray-600">Cryptographic verification for firmware, preventing malicious updates.</p>
+                                    {securityActive && securityFeature === 'ota' && (
+                                        <div className="mt-1 p-1 bg-green-100 border border-green-300 rounded text-green-800 flex items-center">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('Check', {size: 12, class: 'mr-1'}) }}></span>
+                                            <span className="text-xs">Invalid signature: Update rejected!</span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="p-3 rounded-lg bg-gray-800 text-gray-200 w-1/2">
+                                    <h4 className="text-xs font-medium text-gray-400 mb-1">Secure Implementation</h4>
+                                    <pre className="text-xs text-green-400 overflow-auto h-24">
+{`// TUF Firmware Verification Implementation
+class TUFVerifier {
+  constructor() {
+    this.rootKeys = [/* multiple threshold keys */];
+    this.knownVersions = {}; // Prevent rollback attacks
+  }
+  
+  verifyMetadata(metadata) {
+    // Verify chain of trust (root → targets → snapshot)
+    const rootVerified = this.verifySignatures(
+      metadata.root, this.rootKeys
+    );
+    
+    if (!rootVerified) return false;
+    
+    const targetsVerified = this.verifySignatures(
+      metadata.targets, metadata.root.keys
+    );
+    
+    // Check for rollback attacks
+    if (this.knownVersions[metadata.targets.target] >= 
+        metadata.targets.version) {
+      console.log("Rollback attack detected!");
+      return false;
+    }
+    
+    return rootVerified && targetsVerified;
+  }
+}`}
+                                    </pre>
+                                </div>
+                            </div>
+                            
+                            {/* CAN-FD + CMAC Guardian */}
+                            <div className="flex mb-4">
+                                <div className="p-3 rounded-lg bg-green-50 border border-green-200 w-1/2 mr-2">
+                                    <div className="flex items-center mb-1">
+                                        <div className="p-1 rounded-full bg-green-200 mr-2">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('Lock', {size: 16, class: 'text-green-600'}) }}></span>
+                                        </div>
+                                        <span className="font-medium text-sm">CAN-FD + CMAC Guardian</span>
+                                    </div>
+                                    <p className="text-xs text-gray-600">Message authentication ensuring only legitimate commands reach the CAN bus.</p>
+                                    {securityActive && securityFeature === 'can' && (
+                                        <div className="mt-1 p-1 bg-green-100 border border-green-300 rounded text-green-800 flex items-center">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('Check', {size: 12, class: 'mr-1'}) }}></span>
+                                            <span className="text-xs">Invalid CMAC: Frame blocked!</span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="p-3 rounded-lg bg-gray-800 text-gray-200 w-1/2">
+                                    <h4 className="text-xs font-medium text-gray-400 mb-1">Secure Implementation</h4>
+                                    <pre className="text-xs text-green-400 overflow-auto h-24">
+{`// CAN-FD with CMAC Authentication
+class CANGuardian {
+  constructor() {
+    this.securityKeys = new Map(); // Secure key storage
+    this.nonceTracker = new Map(); // Prevent replay attacks
+  }
+  
+  verifyFrame(canFrame) {
+    const { id, data, cmac, nonce } = this.parseFrame(canFrame);
+    
+    // Check if nonce was used before (replay attack)
+    if (this.nonceTracker.has(nonce)) {
+      console.log("Replay attack detected!");
+      return false;
+    }
+    
+    // Record nonce to prevent replay attacks
+    this.nonceTracker.set(nonce, Date.now());
+    
+    // Verify the CMAC with the appropriate key
+    const key = this.securityKeys.get(id);
+    if (!key) return false;
+    
+    return this.cryptoService.verifyCMAC(
+      key, Buffer.concat([id, data, nonce]), cmac
+    );
+  }
+}`}
+                                    </pre>
+                                </div>
+                            </div>
+                            
+                            {/* Architecture Diagram */}
+                            <div className="p-4 border border-green-200 rounded-lg bg-green-50 mb-4">
+                                <h3 className="font-medium text-green-700 mb-2">Secure Architecture Overview</h3>
+                                <div className="flex flex-col items-center">
+                                    <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100 w-full max-w-lg">
+                                        <div className="flex justify-between mb-3">
+                                            <div className="flex items-center">
+                                                <span dangerouslySetInnerHTML={{ __html: createIcon('Shield', {size: 18, class: 'text-green-600 mr-2'}) }}></span>
+                                                <span className="font-medium text-sm">OAuth/MFA API Gateway</span>
+                                            </div>
+                                            <div className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">Edge Security</div>
+                                        </div>
+                                        <div className="border-t border-b border-dashed border-gray-300 my-2 py-2 flex justify-between">
+                                            <div className="flex items-center">
+                                                <span dangerouslySetInnerHTML={{ __html: createIcon('FileDown', {size: 18, class: 'text-green-600 mr-2'}) }}></span>
+                                                <span className="font-medium text-sm">TUF Update Framework</span>
+                                            </div>
+                                            <div className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">OTA Security</div>
+                                        </div>
+                                        <div className="flex justify-between mt-3">
+                                            <div className="flex items-center">
+                                                <span dangerouslySetInnerHTML={{ __html: createIcon('Lock', {size: 18, class: 'text-green-600 mr-2'}) }}></span>
+                                                <span className="font-medium text-sm">CAN Guardian Firewall</span>
+                                            </div>
+                                            <div className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">Vehicle Security</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="h-6 border-l border-green-300 w-0"></div>
+                                    
+                                    <div className="bg-white p-2 rounded-lg shadow-sm border border-green-100 mt-1">
+                                        <div className="flex items-center">
+                                            <span dangerouslySetInnerHTML={{ __html: createIcon('Car', {size: 18,class: 'text-green-600 mr-2'}) }}></span>
+                                            <span className="font-medium text-sm">Protected Vehicle ECUs</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    <div className="mt-4 text-xs text-gray-500 text-center">
+                        Vehicle Security Architecture: Insecure vs Secure Components Comparison
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(
+            <VehicleSecurityDemo />,
+            document.getElementById('vehicle-security-demo')
+        );
+    </script>
+    {% endverbatim %}
+</body>
+</html>
